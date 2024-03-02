@@ -1,7 +1,6 @@
 import json
 import os
 
-import boto3
 import gspread
 from api.api import app
 from api.db import db
@@ -10,7 +9,7 @@ from google.oauth2 import service_account
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import text
 
-BATCH = "batch2"
+BATCH = "batch3"
 
 ADDR_CLEANUP_MAP = {
     "19441 BRETTON DR": "19441 BRETTON",
@@ -54,6 +53,17 @@ ADDR_CLEANUP_MAP = {
     "24339 LEEWIN ST": "24339 LEEWIN",
     "2449 HAZELWOOD STREET": "2449 HAZELWOOD",
     "5603 E OUTER DRIVE": "5603 E OUTER DR",
+    "17319 PATTON ST.": "17319 PATTON",
+    "3626 SOMERSET AVE": "3626 SOMERSET",
+    "19340 MONTE VISTA ST": "19340 MONTE VISTA",
+    "17527 ANNCHESTER ROAD": "17527 ANNCHESTER",
+    "19136 GRIGGS STREET": "19136 GRIGGS",
+    "17376 OHIO STREET": "17376 OHIO",
+    "19333 BARLOW ST": "19333 BARLOW",
+    "3160 S. LIDDESDALE": "3160 LIDDESDALE",
+    "14208 MANSFIELD ST.": "14208 MANSFIELD",
+    "14816 FLANDERS STREET": "14816 FLANDERS",
+    "156 WORCESTER PLACE": "156 WORCESTER PL",
 }
 
 """

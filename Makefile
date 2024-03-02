@@ -10,6 +10,10 @@ fill-pdfs:
 backfill-submissions:
 	PYTHONPATH=$(CURDIR) poetry run python api/scripts/reload_submissions.py
 
+.PHONY: reload-logs
+reload-logs:
+	PYTHONPATH=$(CURDIR) poetry run python api/scripts/reload_logs.py
+
 .PHONY: data
 data:
 	PYTHONPATH=$(CURDIR) poetry run python api/scripts/load_data.py

@@ -14,6 +14,10 @@ backfill-submissions:
 reload-logs:
 	PYTHONPATH=$(CURDIR) poetry run python api/scripts/reload_logs.py
 
+.PHONY: update-data
+update-data:
+	PYTHONPATH=$(CURDIR) poetry run python api/scripts/update_data.py
+
 .PHONY: data
 data:
 	PYTHONPATH=$(CURDIR) poetry run python api/scripts/load_data.py

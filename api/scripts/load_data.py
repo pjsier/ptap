@@ -190,8 +190,30 @@ def load_milwaukee():
         ["ParcelID", "SaleDate", "SalePrice", "SalesValidity"]
     ]
 
+    recent_sales_df = pd.read_csv(
+        os.path.join(DATA_DIR, "armslengthsales_2024_valid.csv"),
+        parse_dates=["Sale_date"],
+        dtype={"taxkey": "str"},
+    ).rename(
+        columns={
+            "taxkey": "ParcelID",
+            "Sale_date": "SaleDate",
+            "Sale_price": "SalePrice",
+        }
+    )[
+        ["ParcelID", "SaleDate", "SalePrice"]
+    ]
+    recent_sales_df = recent_sales_df.sort_values(
+        by=["ParcelID", "SaleDate"], ascending=[True, False]
+    ).drop_duplicates(subset="ParcelID", keep="first")
+
+    combined_sales_df = pd.concat([sale_df, recent_sales_df], ignore_index=True)
+    combined_sales_df = combined_sales_df.sort_values(
+        by=["ParcelID", "SaleDate"], ascending=[True, False]
+    ).drop_duplicates(subset="ParcelID", keep="first")
+
     parcel_df = parcel_geom_df.merge(
-        parcel_df.merge(sale_df, on=["ParcelID"], how="left"),
+        parcel_df.merge(combined_sales_df, on=["ParcelID"], how="left"),
         on=["ParcelID"],
         how="left",
     ).rename(

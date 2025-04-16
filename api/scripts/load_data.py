@@ -200,9 +200,7 @@ def load_milwaukee():
             "Sale_date": "SaleDate",
             "Sale_price": "SalePrice",
         }
-    )[
-        ["ParcelID", "SaleDate", "SalePrice"]
-    ]
+    )[["ParcelID", "SaleDate", "SalePrice"]]
     recent_sales_df = recent_sales_df.sort_values(
         by=["ParcelID", "SaleDate"], ascending=[True, False]
     ).drop_duplicates(subset="ParcelID", keep="first")

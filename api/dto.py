@@ -29,8 +29,6 @@ class ParcelResponseBody(BaseModel):
     basement: Optional[str]
     garage: Optional[str]
     building_type: Optional[str]
-    condition: Optional[str]
-    sale_validity: Optional[str]
     eligible: bool
 
     @classmethod
@@ -67,8 +65,6 @@ class ParcelResponseBody(BaseModel):
             basement=ParcelResponseBody.clean_basement(parcel),
             garage=ParcelResponseBody.clean_garage(getattr(parcel, "garage", None)),
             building_type=getattr(parcel, "building_type", None),
-            condition=getattr(parcel, "condition", None),
-            sale_validity=getattr(parcel, "sale_validity", None),
             eligible=ParcelResponseBody.clean_eligible(parcel),
         )
 
@@ -119,7 +115,7 @@ class ParcelResponseBody(BaseModel):
         if getattr(parcel, "baths", None) is None:
             return
         if hasattr(parcel, "half_baths"):
-            return f"{parcel.baths}.{parcel.half_baths or 0}"
+            return f"{int(parcel.baths)}.{int(parcel.half_baths or 0)}"
         return {1: "1", 2: "1.5", 3: "2 to 3", 4: "3+"}.get(parcel.baths)
 
     @classmethod

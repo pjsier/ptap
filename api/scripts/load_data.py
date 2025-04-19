@@ -5,8 +5,8 @@ from datetime import datetime
 
 import geopandas as gpd
 import pandas as pd
-import pyreadr
 from sqlalchemy import text
+from sqlalchemy.types import Integer
 
 from api import db
 from api.api import app
@@ -173,102 +173,112 @@ def load_detroit():
 
 
 def load_milwaukee():
-    data = pyreadr.read_r(os.path.join(DATA_DIR, "mke.RData"))
+    df = pd.read_csv(
+        os.path.join(DATA_DIR, "mke-2025.csv"),
+        dtype={
+            "TAXKEY": "str",
+            "NEIGHBORHOOD": "str",
+            "HOUSE_NR_LO": "str",
+            "POWDER_ROOMS": "int",
+        },
+        parse_dates=["CONVEY_DATE"],
+    ).rename(columns={"TAXKEY": "ParcelID"})
+    # https://data.milwaukee.gov/dataset/mprop/resource/3d94613b-a1df-4ed1-86d9-d9205925e2ab
+    # Fee is price * 0.003, so reverse that here
+    df["CONVEY_PRICE"] = df["CONVEY_FEE"] / 0.003
     parcel_geom_df = gpd.read_file(os.path.join(DATA_DIR, "mke-parcel-points.geojson"))
-    value_df = data["PropertyValuesProd"][data["PropertyValuesProd"]["YearID"] == 2024][
-        ["ParcelID", "YearID", "TotalAssessedValue"]
-    ]
-    parcel_df = data["PropertyCharacteristics2024"].merge(
-        value_df, on=["ParcelID"], how="left"
-    )
-    sale_df = data["SalesProduction"].loc[
-        data["SalesProduction"]["SalesValidity"] != "I"
-    ]
-    sale_df = sale_df.sort_values(
-        by=["ParcelID", "SaleDate"], ascending=[True, False]
-    ).drop_duplicates(subset="ParcelID", keep="first")[
-        ["ParcelID", "SaleDate", "SalePrice", "SalesValidity"]
-    ]
-
-    recent_sales_df = pd.read_csv(
-        os.path.join(DATA_DIR, "armslengthsales_2024_valid.csv"),
-        parse_dates=["Sale_date"],
-        dtype={"taxkey": "str"},
-    ).rename(
-        columns={
-            "taxkey": "ParcelID",
-            "Sale_date": "SaleDate",
-            "Sale_price": "SalePrice",
-        }
-    )[["ParcelID", "SaleDate", "SalePrice"]]
-    recent_sales_df = recent_sales_df.sort_values(
-        by=["ParcelID", "SaleDate"], ascending=[True, False]
-    ).drop_duplicates(subset="ParcelID", keep="first")
-
-    combined_sales_df = pd.concat([sale_df, recent_sales_df], ignore_index=True)
-    combined_sales_df = combined_sales_df.sort_values(
-        by=["ParcelID", "SaleDate"], ascending=[True, False]
-    ).drop_duplicates(subset="ParcelID", keep="first")
 
     parcel_df = parcel_geom_df.merge(
-        parcel_df.merge(combined_sales_df, on=["ParcelID"], how="left"),
+        df,
         on=["ParcelID"],
         how="left",
     ).rename(
         columns={
             "ParcelID": "pin",
-            "StreetNumb": "street_number",
-            "TotalAssessedValue": "assessed_value",
-            "SaleDate": "sale_date",
-            "SalePrice": "sale_price",
-            "SalesValidity": "sale_validity",
-            "YearBuilt": "year_built",
-            "Kitchen": "kitchen",
-            "FullBath": "baths",
-            "HalfBath": "half_baths",
-            "BedRooms": "bedrooms",
-            "Neighborhood": "neighborhood",
-            "BuildingSequence": "building_sequence",
-            "PhysicalCondition": "condition",
-            "RatingKitchen": "rating_kitchen",
-            "RatingBath": "rating_bath",
-            "RatingHalfBath": "rating_half_bath",
-            "Quality": "quality",
-            "TotalFinishedArea": "total_sq_ft",
-            "BuildingCategory": "building_category",
-            "BuildingType": "building_type",
-            "ImprovedStatus": "improved_status",
+            "HOUSE_NR_LO": "street_number",
+            "C_A_TOTAL": "assessed_value",
+            "CONVEY_DATE": "sale_date",
+            "CONVEY_PRICE": "sale_price",
+            "YR_BUILT": "year_built",
+            "BATHS": "baths",
+            "POWDER_ROOMS": "half_baths",
+            "BEDROOMS": "bedrooms",
+            "NEIGHBORHOOD": "neighborhood",
+            "BLDG_AREA": "total_sq_ft",
+            "LAND_USE_GP": "building_category",
+            "BLDG_TYPE": "building_type",
             "geometry": "geom",
         }
     )
+
     parcel_df = parcel_df[parcel_df.geom.is_valid]
     parcel_df["id"] = parcel_df.reset_index().index
     parcel_df["street_name"] = parcel_df.apply(
         lambda row: " ".join(
-            [
-                str(val)
-                for val in row[["StreetDire", "StreetName", "StreetType"]]
-                if pd.notnull(val)
-            ]
+            [str(val) for val in row[["SDIR", "STREET", "STTYPE"]] if pd.notnull(val)]
         ),
         axis=1,
     )
     parcel_df["street_address"] = (
         parcel_df["street_number"].astype(str) + " " + parcel_df["street_name"]
     )
-    parcel_df["sale_year"] = parcel_df["sale_date"].dt.year
-    parcel_df["age"] = parcel_df["year_built"].apply(
-        lambda y: current_year - y if y else y
+    parcel_df["sale_year"] = parcel_df["sale_date"].dt.year.astype("Int64")
+    parcel_df["age"] = (
+        parcel_df["year_built"]
+        .apply(lambda y: current_year - y if y else y)
+        .astype("Int64")
     )
     parcel_df["price_per_sq_ft"] = (
         parcel_df["assessed_value"] / parcel_df["total_sq_ft"]
     )
-    parcel_df = parcel_df.drop(
-        columns=["StreetDire", "StreetName", "StreetType", "PropertyID", "YearID"]
-    ).set_geometry("geom")
+    parcel_df = parcel_df.astype(
+        {
+            "year_built": "Int64",
+            "bedrooms": "Int64",
+            "baths": "Int64",
+            "half_baths": "Int64",
+        }
+    )
+    parcel_df = parcel_df[
+        [
+            "id",
+            "pin",
+            "street_number",
+            "street_name",
+            "street_address",
+            "neighborhood",
+            "assessed_value",
+            "sale_price",
+            "sale_date",
+            "sale_year",
+            "age",
+            "year_built",
+            "total_sq_ft",
+            "price_per_sq_ft",
+            "bedrooms",
+            "baths",
+            "half_baths",
+            "building_category",
+            "building_type",
+            "geom",
+        ]
+    ].set_geometry("geom")
 
     with app.app_context():
-        parcel_df.to_postgis("milwaukee", db.engine, if_exists="replace", index=False)
+        parcel_df.to_postgis(
+            "milwaukee",
+            db.engine,
+            dtype={
+                "sale_year": Integer(),
+                "age": Integer(),
+                "year_built": Integer(),
+                "bedrooms": Integer(),
+                "baths": Integer(),
+                "half_baths": Integer(),
+            },
+            if_exists="replace",
+            index=False,
+        )
 
 
 if __name__ == "__main__":

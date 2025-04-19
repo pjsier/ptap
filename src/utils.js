@@ -183,10 +183,10 @@ export const DISPLAY_FIELDS_MKE = [
     title: "Building style",
     field: "building_type",
   },
-  {
-    title: "Physical condition",
-    field: "condition",
-  },
+  // {
+  //   title: "Physical condition",
+  //   field: "condition",
+  // },
   {
     title: "Distance",
     field: "distance",
@@ -210,10 +210,6 @@ export const DISPLAY_FIELDS_MKE = [
   {
     title: "Sale Date",
     field: "sale_date",
-  },
-  {
-    title: "Sale Validity",
-    field: "sale_validity",
   },
 ]
 
